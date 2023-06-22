@@ -19,6 +19,8 @@ Using the dataset obtained from FSU's [Florida Climate Center](https://climatece
 
 ```{r, message=FALSE, warning=FALSE}
 library(tidyverse)
+library(ggridges)
+library(tidytext)
 weather_tpa <- read_csv("https://raw.githubusercontent.com/reisanar/datasets/master/tpa_weather_2022.csv")
 # random sample 
 sample_n(weather_tpa, 4)
@@ -36,6 +38,27 @@ knitr::include_graphics("https://github.com/reisanar/figs/raw/master/tpa_max_tem
 
 Hint: the option `binwidth = 3` was used with the `geom_histogram()` function.
 
+
+```{r}
+library(lubridate)
+tpa_clean <- weather_tpa %>% 
+  mutate(month = month(month, label = TRUE, abbr = FALSE),
+         day = wday(day, label = TRUE, abbr = FALSE))
+```
+
+
+
+
+```{r}
+ggplot(tpa_clean, aes(x = max_temp, fill = month)) +
+  geom_histogram(binwidth = 3, color = "white", boundary = 2) +
+  guides(fill = "none") +
+  facet_wrap(vars(month)) +
+  theme_bw() +
+  labs(x = "Maximum Temperatures", y = "Number of Days")
+```
+
+
 (b) Create a plot like the one below:
 
 ```{r, echo = FALSE, out.width="80%", fig.align='center'}
@@ -44,6 +67,15 @@ knitr::include_graphics("https://github.com/reisanar/figs/raw/master/tpa_max_tem
 
 Hint: check the `kernel` parameter of the `geom_density()` function, and use `bw = 0.5`.
 
+```{r}
+ggplot(tpa_clean, aes(x = max_temp)) +
+  geom_density(color = "grey20", fill = "grey50",
+               bw = 0.5, kernel = "epanechnikov")+
+  theme_minimal() +
+   labs(x = "Maximum temperature")
+```
+
+
 (c) Create a plot like the one below:
 
 ```{r, echo = FALSE, out.width="80%", fig.align='center'}
@@ -51,6 +83,16 @@ knitr::include_graphics("https://github.com/reisanar/figs/raw/master/tpa_max_tem
 ```
 
 Hint: default options for `geom_density()` were used. 
+
+```{r}
+ggplot(tpa_clean, aes(x = max_temp, fill = month)) +
+  geom_density() +
+  guides(fill = "none") +
+  facet_wrap(vars(month)) +
+  theme_bw() +
+   labs(x = "Maximum temperature", y = "", title = "Density plots for each month in 2022")
+```
+
 
 (d) Generate a plot like the chart below:
 
@@ -61,9 +103,28 @@ knitr::include_graphics("https://github.com/reisanar/figs/raw/master/tpa_max_tem
 
 Hint: use the`{ggridges}` package, and the `geom_density_ridges()` function paying close attention to the `quantile_lines` and `quantiles` parameters. The plot above uses the `plasma` option (color scale) for the _viridis_ palette.
 
+```{r}
+ggplot(tpa_clean, aes(x = max_temp, y = month, fill = after_stat(x))) +
+  geom_density_ridges_gradient(quantile_lines = TRUE, quantiles = 2) +
+  scale_fill_viridis_c(option = "plasma", name = "") +
+  labs(x = "Maximum temperature (in Fahrenheit degrees)", y = NULL, color = "Temp") +
+  theme_minimal()
+```
+
+
 
 (e) Create a plot of your choice that uses the attribute for precipitation _(values of -99.9 for temperature or -99.99 for precipitation represent missing data)_.
 
+```{r}
+ggplot(data=tpa_clean,
+      aes(precipitation, month, fill = month)) +
+      geom_bar(stat="identity") +
+  labs(x = "Precipitation in Inches", y = "Month", title = "Total Precipitation by Month in Tampa for 2022", caption = "Source: FSU Florida Climate Center") +
+  theme_minimal() +
+  theme(legend.position = "none")
+   
+  
+```
 
 
 ## PART 2 
@@ -88,58 +149,84 @@ Make sure to include a copy of the dataset in the `data/` folder, and reference 
 
 (to get the "raw" data from any of the links listed above, simply click on the `raw` button of the GitHub page and copy the URL to be able to read it in your computer using the `read_csv()` function)
 
-
-### Option (B): Data on Concrete Strength 
-
-Concrete is the most important material in **civil engineering**. The concrete compressive strength is a highly nonlinear function of _age_ and _ingredients_. The dataset used here is from the [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/index.php), and it contains 1030 observations with 9 different attributes 9 (8 quantitative input variables, and 1 quantitative output variable). A data dictionary is included below: 
-
-
-Variable                      |    Notes                
-------------------------------|-------------------------------------------
-Cement                        | kg in a $m^3$ mixture             
-Blast Furnace Slag            | kg in a $m^3$ mixture  
-Fly Ash                       | kg in a $m^3$ mixture             
-Water                         | kg in a $m^3$ mixture              
-Superplasticizer              | kg in a $m^3$ mixture
-Coarse Aggregate              | kg in a $m^3$ mixture
-Fine Aggregate                | kg in a $m^3$ mixture      
-Age                           | in days                                             
-Concrete compressive strength | MPa, megapascals
-
-
-Below we read the `.csv` file using `readr::read_csv()` (the `readr` package is part of the `tidyverse`)
+```{r}
+lyrics_2015 <- read_csv("https://raw.githubusercontent.com/reisanar/datasets/master/BB_top100_2015.csv")
+lyrics_2015 <- select(lyrics_2015, -Year, -Source)
+```
 
 ```{r}
-concrete <- read_csv("../data/concrete.csv", col_types = cols())
+lyrics_2015 %>% 
+  filter(Rank %in% 1:10)
 ```
-
-
-Let us create a new attribute for visualization purposes, `strength_range`: 
 
 ```{r}
-new_concrete <- concrete %>%
-  mutate(strength_range = cut(Concrete_compressive_strength, 
-                              breaks = quantile(Concrete_compressive_strength, 
-                                                probs = seq(0, 1, 0.2))) )
+lyrics_2015 %>% 
+  filter(Rank %in% 1:10) %>% 
+  unnest_tokens(word, Lyrics)
 ```
 
-
-
-1. Explore the distribution of 2 of the continuous variables available in the dataset. Do ranges make sense? Comment on your findings.
-
-2. Use a _temporal_ indicator such as the one available in the variable `Age` (measured in days). Generate a plot similar to the one shown below. Comment on your results.
-
-```{r, echo = FALSE, out.width="80%", fig.align='center'}
-knitr::include_graphics("https://github.com/reisanar/figs/raw/master/concrete_strength.png")
+```{r}
+lyrics_2015 %>%
+  filter(Rank %in% 1:10) %>%
+  unnest_tokens(word, Lyrics, token = "words") %>%
+  filter(!word %in% stop_words$word, str_detect(word, "[a-z]"))
 ```
 
-
-3. Create a scatterplot similar to the one shown below. Pay special attention to which variables are being mapped to specific aesthetics of the plot. Comment on your results. 
-
-```{r, echo = FALSE, out.width="80%", fig.align='center'}
-knitr::include_graphics("https://github.com/reisanar/figs/raw/master/cement_plot.png")
+```{r}
+bb_top_10 <- lyrics_2015 %>%
+  filter(Rank %in% 1:10) %>%
+  unnest_tokens(word, 
+                Lyrics, 
+                token = "words") %>%
+  filter(!word %in% stop_words$word, 
+         str_detect(word, "[a-z]"))
 ```
 
+```{r}
+bb_top_10 %>% 
+  group_by(word) %>% 
+  summarise(uses = n()) %>% 
+  arrange(desc(uses)) %>% 
+  head(10)
+```
+```{r}
+bb_top_10 %>% 
+  group_by(word) %>% 
+  summarise(uses = n()) %>% 
+  arrange(desc(uses)) %>% 
+  slice(1:15) %>% 
+  ggplot() + 
+  geom_bar(aes(x = word, y = uses, fill = word), 
+           stat = "identity") + 
+  coord_flip() + 
+  scale_x_discrete(breaks=c("youre","yeah","whip", "watch", "uptown", "ooh", "nae", "love", "im", "ill", "girl", "funk", "dont", "bop", "baby"),
+        labels=c("You're","Yeah","Whip", "Watch", "Uptown", "Ooh", "Nae", "Love", "I'm", "Ill", "Girl", "Funk", "Don't", "Bop", "Baby")) +
+   labs(x = "Word", y = "Number of Uses", title = "Most Used Words in Billboard Top 10 Songs for 2015", subtitle = "(1. Uptown Funk, 2. Thinking Out Loud, 3. See You Again, 4. Trap Queen, 5. Sugar, \n 6. Shut Up and Dance, 7. Blank Space, 8. Watch Me, 9. Earned It, 10. The Hills)", caption = "Source: Billboard Top 100, 2015") +
+     theme_minimal() +
+  theme(legend.position = "none")
+```
+```{r}
+bb_top_10 %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(Song, sentiment) %>%
+  spread(sentiment, n, fill = 0) %>%
+  mutate(sentiment = positive - negative)
+```
 
-
-
+```{r}
+bb_top_10 %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(Song, sentiment) %>%
+  spread(sentiment, n, fill = 0) %>%
+  mutate(sentiment = positive - negative) %>% 
+  ggplot() + 
+  geom_bar(aes(x = reorder(Song, sentiment), 
+               y = sentiment, fill = Song), 
+           stat = "identity") + 
+  coord_flip() + 
+  scale_x_discrete(breaks=c("sugar","uptown funk","thinking out loud", "earned it", "the hills", "shut up and dance", "see you again", "trap queen", "watch me", "blank space"),
+        labels=c("Sugar","Uptown Funk","Thinking Out Loud", "Earned It", "The Hills", "Shut Up and Dance", "See You Again", "Trap Queen", "Watch Me", "Blank Space")) +
+  labs(x = "", y = "Sentiment", title = "Sentiment Analysis of Billboard Top 10 Songs in 2015", subtitle = "(Using Bing Lexicon)", caption = "Source: Billboard Top 100, 2015") + 
+  theme_minimal() +
+  theme(legend.position = "none")
+```
