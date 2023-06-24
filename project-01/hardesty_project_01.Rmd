@@ -9,4 +9,136 @@ output:
 
 # Data Visualization Project 01
 
-_revised version of mini-project 01 goes here_
+
+```{r}
+library(tidyverse)
+# long dataset
+bl_1 <- read_csv("data/barro_lee_take_two.csv")
+# wide dataset with names of indicators of interest
+bl_2 <- read_csv("data/barro_lee.csv")
+```
+```{r}
+head(bl_1)
+```
+
+```{r}
+head(bl_2)
+```
+```{r}
+kh_indicators <- colnames(bl_2)
+# remove first entry
+kh_indicators <- kh_indicators[-1]
+# chech the names by "printing" the vector
+print(kh_indicators)
+```
+```{r}
+bl_1 %>% 
+  filter(Indicator %in% kh_indicators)
+```
+
+```{r}
+# build a vector with the exact names of the indicators of interest
+rsa_indicators <- c("BAR.NOED.15UP.FE.ZS", 
+                   "BAR.NOED.15UP.ZS", 
+                   "BAR.NOED.25UP.FE.ZS", 
+                   "BAR.NOED.25UP.ZS")
+```
+
+```{r}
+bl_1 %>% 
+  filter(Indicator %in% rsa_indicators)
+```
+
+```{r}
+my_data <- bl_1 %>% 
+  filter(Indicator %in% rsa_indicators)
+```
+
+```{r}
+ggplot(my_data, aes(x = Year, y = Value)) + 
+  geom_line(aes(color = Indicator), size=1) + 
+  scale_color_manual (name = "", values = c("#CC0066", "#0045ff", "#8900ff", "#0cbd18"),  labels = c("Female Age 15+", "All Age 15+", "Female Age 25+", "All Age 25+")) +
+  labs(x = "Year",
+       y = "Percentage of Pop. With No Education",
+       caption = "Source: The World Bank",
+       title = "Haiti Barro-Lee Indicators for No Education") +
+  theme_minimal() +
+theme(legend.position = "bottom")
+```
+
+```{r}
+female_indicators <- c("BAR.PRM.ICMP.15UP.FE.ZS", 
+                   "BAR.SEC.ICMP.15UP.FE.ZS", 
+                   "BAR.TER.ICMP.15UP.FE.ZS")
+```
+
+```{r}
+my_data_female <- bl_1 %>% 
+  filter(Indicator %in% female_indicators)
+```
+
+```{r}
+ggplot(my_data_female, aes(x = Year, y = Value)) + 
+  geom_line(aes(color = Indicator), size=1) + 
+  scale_color_manual (name = "", values = c("#CC0066", "#0045ff", "#0cbd18"), labels = c("Some Primary Schooling", "Some Secondary Schooling", "Some Tertiary Schooling")) +
+ theme_minimal() +
+   theme(legend.text = element_text(size=9, 
+                                     face="bold")) +
+  labs(x = "Year",
+       y = "Percentage of Female Population 15+",
+       caption = "Source: The World Bank",
+       title = "Haiti Barro-Lee Indicators for Some Education") +
+theme(legend.position = "bottom")
+```
+
+```{r}
+ average_indicators <- c("BAR.SCHL.15UP", "BAR.SEC.SCHL.15UP")
+```
+
+```{r}
+my_data_average <- bl_1 %>% 
+  filter(Indicator %in% average_indicators)
+```
+
+
+```{r}
+ggplot(my_data_average, aes(x=Year, y=Value, fill=Indicator)) +
+         geom_bar(stat="identity") +
+  scale_fill_manual(name = "", values=c("#fc5394", "#acfc60"), labels = c("Years of Primary Schooling", "Years of Secondary Schooling")) +
+  geom_text(aes(label=Value), vjust=1.5, colour="black", size=2.5) +
+labs(x = "Year",
+       y = "Average Years of Schooling for All Population 15+",
+       caption = "Source: The World Bank",
+       title = "Haiti Barro-Lee Indicators for Average Years of Education") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+# Report: Haiti Barro-Lee Education Indicators Exploration
+
+My dataset is based on the Barro-Lee Dataset, which "gives a comprehensive picture of the distribution of education attainment and human capital among age groups and genders in 144 countries from 1970" (The World Bank). The dataset tracks educational attainment of each country's total population and female population using 5-year age groups and eight indicators: No Education, Completed Primary, Incomplete and Completed Primary, Completed Secondary, Incomplete and Completed Secondary, Completed Tertiary, Incomplete and Completed Tertiary, and Average Years of Schooling. Specifically, I examined the dataset for the country of Haiti. 
+
+I found my original dataset on The Humanitarian Data Exchange, which included the Barro-Lee indicators from 1970-2010, as well as a great deal of additional data related to Haiti's education system and other demographics. From this original dataset, I narrowed down my focus by creating CSV files in long form and wide form that included only data for all Barro-Lee indicators and only for the 15+ and 25+ age groups for both total population and female population.  
+
+## Data Exploration
+
+I was primarily interested in exploring the question of changing access to education over time in Haiti. I was particularly interested in whether discrepancies were apparent in access between students identified as female and the rest of the population. Because I was working with a fairly straightforward, time-based dataset, I knew my data would be ideal for visuals that track trends over time (e.g., line graphs). However, I had a great deal of difficulty figuring out how to "wrangle" the data and gather specific data points together, such as specific indicators, to generate my visualizations. With Dr. Sanchez-Arias' assistance, I learned how to filter the long dataset and create appropriate data frames using the specific indicators I wanted to focus on, as appears in the code "story" above.
+
+## Data Stories
+
+I generated three visualizations, two line graphs and one bar chart, to explore some of the data. The level of sophistication in these graphics was definitely limited by my ability in R. However, I do see some data stories emerging. The first line graph indicates clearly that the percentage of Haiti's population with no education at all has declined considerably from 1970 to 2010, suggesting that citizens now have greater access to at least some education. For both age groups considered, female students do appear to lag behind total population. 
+
+In the second line graph, I examined the percentage of the female population age 15+ who had completed at least some primary, secondary, or tertiary education but had not graduated. The trend lines suggest that female students have had increasing access to education over time for primary and (to a lesser degree) secondary education, but they have had almost no tertiary education regardless of year. The dip in primary school completion around 2000 is also interesting and made me wonder what factor(s) contributed to the decline.
+
+The bar graph considers average years of education in primary and secondary schooling for the total population age 15+. Again, we see some expanding access to education over time for primary and (to a lesser degree) secondary education. I originally included tertiary schooling in the plot, but it barely registered on the chart. This suggests a significant barrier to tertiary education in Haiti for all citizens regardless of gender. It would be interesting to compare this data for average years of schooling to other Caribbean countries. Unfortunately, I suspect that Haiti's statistics are still relatively low when compared both regionally and globally.
+
+## Application of Design Principles
+
+Again, my ability to apply appropriate data visualization principles was significantly limited by my knowledge of R thus far. However, I experimented quite a bit with the application of color. While I explored a number of potential color palettes, I ultimately preferred to pick my own colors using the hex codes. I was going for a bold color scheme, and in particular I wanted the lines to be easily distinguishable from each other. I increased the line size for visibility. I had also experimented with adding different line types (e.g., dashed, dotted), but then I decided it wasn't necessary to the communication goals. I learned how to apply the various labels and manually make changes to the legends. I also figured out how to add labels to the columns of the bar chart to support readability.
+
+
+### **References**
+
+Humanitarian Data Exchange. Haiti - Education. United Nations Office for the Coordination of Humanitarian Affairs. https://data.humdata.org/dataset/world-bank-education-indicators-for-haiti
+
+Education Statistics (EdStats). Barro-Lee Dataset. The World Bank.  https://datatopics.worldbank.org/education/wProjection/bpopmodel
