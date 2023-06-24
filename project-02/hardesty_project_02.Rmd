@@ -9,4 +9,211 @@ output:
 
 # Data Visualization Project 02
 
-_revised version of mini-project 02 goes here_
+## Spatial Visualization
+
+```{r}
+library(tidyverse)
+library(plotly)
+library(htmlwidgets)
+library(broom)
+# Load and clean internet user data
+poverty <- read_csv("data/Poverty.csv") %>%
+  # Rename country code column to ISO_A3 so it matches what's in the Natural Earth shapefile
+  rename(users = `Ratio`,
+         ISO_A3 = Code)
+```
+
+```{r load-libraries-data, warning=FALSE, message=FALSE}
+library(sf)
+# Load world shapefile from Natural Earth
+# https://www.naturalearthdata.com/downloads/110m-cultural-vectors/
+world_shapes <- read_sf("data/ne_110m_admin_0_countries/ne_110m_admin_0_countries.shp")
+```
+
+```{r}
+poverty_2018 <- poverty %>%
+  filter(Year == 2018)
+
+poverty_map <- world_shapes %>%
+  left_join(poverty_2018, by = "ISO_A3") %>%
+  filter(ISO_A3 != "ATA")  
+```
+
+```{r}
+ ggplot() +
+    geom_sf(data = poverty_map, aes(fill = users)) +
+  scale_fill_viridis_c(option = "plasma") +
+  labs(fill = "Percent of Population") +
+  theme_void() +
+  theme(legend.position = "bottom") +
+  labs(caption = "Source: The World Bank", title = "Share of Population Living in Extreme Poverty, 2018",  subtitle = "(Defined as living below the International Poverty Line of $2.15 per day. Grey represents missing data.)")
+```
+
+## Interactive Plot
+
+```{r}
+poverty_indicators <- read_csv("data/poverty_indicators.csv")
+```
+
+
+```{r}
+my_plot <- ggplot(
+  data = poverty_indicators,
+  mapping = aes(x = Gini, y = Slums, 
+                color = Region, label = Country)) +
+  geom_point(size=3) +
+  theme_minimal() +
+  scale_color_viridis_d(option = "plasma", name = "") +
+  labs(x = "Gini Index",
+       y = "Percentage of Population Living in Slums",
+       title = "Comparison of Income Inequality and Slums, 2018", subtitle = "Based on global World Bank indicators") 
+```
+
+```{r}
+ggplotly(my_plot, tooltip = c("Region", "Country"))  %>% 
+  layout(legend = list(orientation = "h", x = 0.15, y = -0.2)) %>%
+  layout(title = list(text = paste0('Comparison of Income Inequality and Slums, 2018',
+                                    '<br>',
+                                    '<sup>',
+                                    'Based on global World Bank indicators',
+                                    '</sup>')))
+```
+
+```{r}
+interactive_plot <- ggplotly(
+  my_plot, tooltip = c("Region", "Country"))  %>% 
+  layout(legend = list(orientation = "h", x = 0.375, y = -0.2)) %>%
+  layout(title = list(text = paste0('Comparison of Income Inequality and Slums, 2018',
+                                    '<br>',
+                                    '<sup>',
+                                    'Based on global World Bank indicators',
+                                    '</sup>')))
+interactive_plot
+```
+
+```{r}
+saveWidget (interactive_plot, "my_plot.html")
+```
+
+Note: I altered the legend position for the .HTML version because I thought it looked better in the .HTML file (even though it looks weird here).
+
+## Visualization of a Model
+
+```{r}
+literacy_v_life <- read_csv("data/literacy_v_life.csv")
+```
+
+```{r}
+lvl_model <- lm(Life ~ Literacy,
+                data = literacy_v_life)
+```
+
+```{r}
+ggplot(literacy_v_life, aes(x = Literacy, y = Life)) +
+  geom_point() +
+  geom_smooth(method = "lm", 
+              formula = "y ~ x") + 
+       annotate(
+    "text", label = "Least Developed Countries",
+    x = 66.5, y = 68, size = 3, colour = "#440154"
+  ) +
+  annotate(
+    "text", label = "Fragile and Conflict Affected Situations",
+    x = 70, y = 59.2, size = 3, colour = "#440154"
+  ) +
+  annotate(
+    "text", label = "Heavily Indebted\nPoor Countries",
+    x = 60.4, y = 65, size = 3, colour = "#440154"
+  ) +
+  guides(col = FALSE)   +
+   annotate(geom = "segment", 
+           x = 64.2, xend = 64.2, 
+           y = 60, yend = 61.5, 
+           color = "#440154",
+           arrow = arrow(length = unit(0.5, "lines"))) +
+   annotate(geom = "segment", 
+           x = 64.1, xend = 64.1, 
+           y = 66.9, yend = 65.4, 
+           color = "#440154",
+           arrow = arrow(length = unit(0.5, "lines"))) +  
+  annotate(geom = "segment", 
+           x = 61.2, xend = 62.7, 
+           y = 63, yend = 63, 
+           color = "#440154",
+           arrow = arrow(length = unit(0.5, "lines"))) +  
+  theme_minimal() +
+  scale_color_viridis_d(option = "plasma") +
+      labs(x = "Adult Literacy Rate (Age 15+)",
+       y = "Life Expectancy at Birth (Years)",
+       title = "Comparison of Adult Literacy and Life Expectancy, 2018", caption = "Source: The World Bank", subtitle = "World Bank indicators for 3 special country classifications (noted) and 9 regions") +
+  theme (plot.subtitle = element_text(color = "blue", face = "italic"))
+```
+
+
+```{r}
+tidy(lvl_model, conf.int = TRUE)
+```
+
+```{r}
+glance(lvl_model)
+```
+
+```{r}
+lvl_coefs <- tidy(lvl_model, conf.int = TRUE) %>% 
+  filter(term != "(Intercept)")
+
+lvl_coefs
+```
+
+```{r}
+ggplot(lvl_coefs,
+       aes(x = estimate, 
+           y = fct_rev(term))) +
+  geom_pointrange(aes(xmin = conf.low, 
+                      xmax = conf.high)) +
+  geom_vline(xintercept = 0, 
+             color = "purple") + 
+  theme_minimal()
+```
+
+# Report: Exploration of Global World Bank Indicators
+
+
+For this project, I decided to continue my exploration of various indicator datasets from The World Bank (https://data.worldbank.org/indicator), this time focusing on worldwide trends rather than country-specific. To meet the assignment guidelines, I worked with multiple datasets, **which are described and linked in the "Data Stories" section below.** For all visuals, I focused on data for the year 2018, primarily because I had fuller data for this particular year.
+
+I chose to complete the project in RStudio, even though I knew that would limit the overall project sophistication. However, I felt I still had a lot to learn in the program. I installed several new packages during this process, including **jtools**, **htmlwidgets**, **plotly**, **ggrepel**, and **broom**. I learned a lot.
+
+## Data Exploration
+
+I began by working with the extreme [poverty](https://data.worldbank.org/topic/poverty?view=chart) indicators available on The World Bank's website. I had originally planned to generate all of my graphics using this data, but I ultimately expanded to include other indicators related to health and education. I knew these datasets would be ideal for creating spatial, map-based visualizations. However, I also spent some time exploring and comparing different indicators to see if they suggested correlations. 
+
+I did a lot of my data cleaning manually in the .CSV files. For example, I removed unnecessary header lines and limited the data to my target year and geographic regions. I also truncated some of the long decimal data to the tenth place (primarily to make the display more used-friendly on my interactive plot). I know that most of this data cleaning can be completed in R to target only necessary data, such as using the `filter()` function, but it was just easier for me to work directly from a file that was already "cleaned." Note: the next course module specifically recommended NOT doing what I did, as it does not support reproducible research. Oops.
+
+## Data Stories
+
+I generated three visualizations, a map, an interactive scatter plot, and a linear regression model, to explore some of the data. The level of sophistication in these graphics was still limited by my ability in R. However, it was a bit easier for me this time, and I do see some data stories emerging. 
+
+The spatial visualization (world map) incorporates data from the World Bank's [poverty indicator of headcount ratio](https://data.worldbank.org/indicator/SI.POV.DDAY?view=chart) at what's considered the "International Poverty Line," or those living on $2.15 or less a day. As you can see from my map (and other graphics on the World Bank site), the data for this indicator is incomplete. There are a lot of grey areas for countries with no indicator data in 2018. (Yes, France IS missing from this one!) However, the map still tells a story of where international poverty is clustered, in Africa and parts of Asia and Central America. I think the dark blue in the map also tells a story of relative wealth.
+
+The second visualization, the interactive scatterplot, compares two different poverty indicators: the [percentage of the population living in slums](https://data.worldbank.org/indicator/EN.POP.SLUM.UR.ZS?view=chart) and the [Gini Index](https://data.worldbank.org/indicator/SI.POV.GINI?view=chart). The Gini Index is a summary measure of income inequality, representing the dispersion of income across the entire country's income distribution (U.S. Census Bureau). The Gini coefficient ranges from 1 to 0, with 0 indicating perfect equality (i.e., the lower the Gini coefficient, the greater the income equality). I grouped the data points by region and only included a total of 41 countries for which both of these indicators are available for 2018. Therefore, it's important to note that this isn't a perfect worldwide picture.
+
+At first glance, the scatterplot doesn't immediately suggest a relationship between the two indicators. However, when I considered it more, two things stood out. First, it seems as though the percentage of population living in slums seems to begin rising exponentially once the Gini Index reaches a coefficient of around 35+. Also, the colors representing different regions are clustered. For example, countries in Latin America and the Caribbean are clustered around the bottom right, suggesting that they have a higher rate of income inequality but relatively lower percentage of population living in slums. In contrast, African nations are clusterd in the top middle-to-right, suggesting a higher presence of both income inequality and people living in slums. However, this might just be a reflection of differences in the quantities of urban populations in these regions.
+
+The third plot is a linear regression model comparing the indicators for [life expectancy](https://data.worldbank.org/indicator/SP.DYN.LE00.IN?view=chart) at birth (total years, all population) and [literacy rates](https://data.worldbank.org/indicator/SE.ADT.LITR.ZS?view=chart) for the total adult population age 15+. I grouped the data by region and also included countries grouped in the special classifications of "Fragile and Conflict Affected Situations," "Heavily Indebted Poor Countries," and "Least Developed Countries." As might be expected, the trend line suggests a strong positive correlation between the indicators. The higher the life expectancy, the higher the literacy rate. I followed the steps in our lecture to further explore the data using the **broom** package. Creating a coefficient plot for one variable probably isn't helpful, but I followed the steps for practice.
+
+It would be interesting to develop time-based trends for these datasets. I focused on a single year (2018), but I think many rich and interactive visualizations could incorporate indicator data over time. This would be fun to explore using a program like Tableau. Looking at multiple years may help with the issue of gaps in the individual country data as well. 
+
+I also explored some of the datasets on Our World in Data. Some of their time-series maps and charts that use the same World Bank data are amazing. For example, I envied some of the graphics on their [Income Inequality](https://ourworldindata.org/income-inequality) page.  
+
+## Application of Design Principles
+
+My ability to apply appropriate data visualization principles was still limited by my knowledge of R, but perhaps less so with this project. I again experimented quite a bit with the application of color. While I explored a number of potential color palettes, this time I unified the theme among the plots using the `plasma` option for the *viridis* palette. I again preferred a bold color scheme with colors that are easily distinguishable from each other. I applied the various labels and manually made changes to the legends. 
+
+One of the project requirements was to add annotations to one of the plots. I tried to include the region names or region code labels in the linear model (third graphic). I spent a great deal of time working with the `geom_text_repel()` and `geom_label_repel()` functions to try to add labels that looked good. No matter how much I tweaked the different arguments, I couldn't get it to look like I wanted it to. So, I settled for annotations highlighting where the three special country classifications in the dataset are located on the plot with arrows added. I could also consider adding annotations to label the other points, but that would be a very tedious way to do it. 
+
+### **References**
+
+Gini Index. U.s. Census Bureau. https://www.census.gov/topics/income-poverty/income-inequality/about/metrics/gini-index
+
+Global Data Indicators. The World Bank. https://data.worldbank.org/indicator 
+
